@@ -13,6 +13,11 @@ $messages = array(
 
 set_time_limit( 0 );
 
+//this is the DPI we assume the source is coming with
+// resizing for the I image is based on ratio I_DPI/BASE_DPI
+define( 'BASE_DPI', 640 );
+
+
 if ( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 
 	try {
@@ -22,20 +27,7 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 			throw new Exception( $messages[$_FILES['icon']['error']] );
 		}
 
-		/*
-		if ( $_FILES['icon-transparent']['error'] != 0 && $_FILES['icon-transparent']['error'] != 4 ) {
-			throw new Exception( $messages[$_FILES['icon-transparent']['error']] );
-		}
-
-		if ( $_FILES['splash']['error'] != 0 && $_FILES['splash']['error'] != 4 ) {
-			throw new Exception( $messages[$_FILES['splash']['error']] );
-		}
-
-		if ( $_FILES['icon']['error'] == 4 && $_FILES['icon-transparent']['error'] == 4 && $_FILES['splash']['error'] == 4 ) {
-			throw new Exception( 'At least select one file.' );
-		}
-
-		*/
+	
 
 		if ( $_POST['language'] && !preg_match( '/^[a-z]{2}$/', $_POST['language'] ) ) {
 			throw new Exception( 'Invalid ISO 639-1 language code.' );
@@ -68,20 +60,9 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 			$sourcepath = $tmp_path . '/' .  $filename;
 
 			define( 'ICON_PATH', 0 );
-			//define( 'ICON_SIZE', 1 );
 			define( 'ICON_DPI', 1 );
-			//define( 'ICON_RADIUS', 3 );
 
-			define( 'SPLASH_PATH', 0 );
-			define( 'SPLASH_WIDTH', 1 );
-			define( 'SPLASH_HEIGHT', 2 );
-			define( 'SPLASH_DPI', 3 );
-			define( 'SPLASH_ROTATE', 4 );
 
-			//move temporasry source file into temp folder
-			/*if(!move_uploaded_file($_FILES["icon"]["tmp_name"], $sourcepath )){
-				throw new Exception( 'Error uploading file.' );
-			}*/
 
 			if ( $_FILES['icon']['error'] == 0 ) {
 
@@ -135,16 +116,18 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 				}
 
 
-					$image = new Imagick();
-					$image->readImage( $_FILES['icon']['tmp_name'] );
+				//get the source image once
+				$image = new Imagick();
+				$image->readImage( $_FILES['icon']['tmp_name'] );
 
-					$d = $image->getImageGeometry(); 
-					$w = $d['width']; 
-					$h = $d['height']; 
+				$d = $image->getImageGeometry(); 
+				$w = $d['width']; 
+				$h = $d['height']; 
 
+
+				//scale the source image for each options
 				foreach ( $sizes as $size ) {
 
-					//copy source file into destination path					//resize file
 
 					$file = $tmp_path . $size[ICON_PATH];
 					$dir = dirname( $file );
@@ -156,18 +139,10 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' ) {
 					}
 
 
-					//copy($sourcepath, $file);
-
-				
-
-
 					$image->setResolution( $size[ICON_DPI], $size[ICON_DPI] );
 					$image->setImageFormat( 'png' );
-					$rate = ($size[ICON_DPI] / 640);
-					echo $rate;
-					echo "rate";
+					$rate = ($size[ICON_DPI] / BASE_DPI);
 					$image->resizeImage($w * $rate, $h * $rate,imagick::FILTER_LANCZOS, 1);
-					//$image->cropThumbnailImage( 50, 50 );
 					$image->setImageResolution( $size[ICON_DPI], $size[ICON_DPI] );
 					$image->setImageUnits( imagick::RESOLUTION_PIXELSPERINCH );
 					// $image->setImageAlphaChannel( imagick::ALPHACHANNEL_DEACTIVATE );
